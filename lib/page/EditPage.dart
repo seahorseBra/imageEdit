@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:image_edit/paint/layer.dart';
+import 'package:image_edit/paint/paintWidget.dart';
 
 class EditPage extends StatelessWidget {
   @override
@@ -62,15 +64,41 @@ class EditState extends State<EditStateWidget> {
   _getCanvas() {
     return new Center(
       child: new Stack(
-        children: <Widget>[
-          new Container(
-            color: Colors.white,
-            child: new Image.asset("images/bg.jpg"),
-          ),
-          _showGesture(),
-        ],
+        children: _showLayer(),
       ),
     );
+  }
+
+  Widget bgLayer;
+  PaintLayerWidget paintLayer;
+
+  ///显示图层
+  _showLayer() {
+    if (_editState == 1) {}
+    if (_editState == 2) {}
+    if (_editState == 3) {
+      if (paintLayer == null) {
+        paintLayer = new PaintLayerWidget();
+      } else {
+        paintLayer.enablePaint(true);
+      }
+    } else if (paintLayer != null) {
+      paintLayer.enablePaint(false);
+    }
+    if (_editState == 4) {}
+    if (bgLayer == null) {
+      bgLayer = new Container(
+        color: Colors.white,
+        child: new Image.asset("images/bg.jpg"),
+      );
+    }
+    List<Widget> layers = <Widget>[];
+
+    layers.add(bgLayer);
+    if (paintLayer != null) {
+      layers.add(paintLayer);
+    }
+    return layers;
   }
 
   ///编辑选择框
@@ -106,7 +134,7 @@ class EditState extends State<EditStateWidget> {
               ),
             ),
             new GestureDetector(
-              onTap: () => revert(),
+              onTap: () => paintLayer.revertStep(),
               child: new Icon(
                 Icons.reply,
                 size: 60,
@@ -128,9 +156,9 @@ class EditState extends State<EditStateWidget> {
   Widget _getPaintColor(Color color) {
     return new GestureDetector(
       onTap: () {
-        setState(() {
-          addLine(color);
-        });
+        if (paintLayer != null) {
+          paintLayer.setPaintColor(color);
+        }
       },
       child: new Container(
           width: 40,
@@ -146,141 +174,6 @@ class EditState extends State<EditStateWidget> {
                 )),
           )),
     );
-  }
-
-  List<Line> _lines = <Line>[];
-  Line _lastLines;
-
-  Widget _showGesture() {
-    if (_lastLines == null) {
-      _lastLines = new Line(Colors.white);
-      _lines.add(_lastLines);
-    }
-    if (_editState == 3) {
-      return new GestureDetector(
-        onPanUpdate: (DragUpdateDetails details) {
-          setState(() {
-            RenderBox _object = context.findRenderObject();
-            Offset _locationPoints =
-                _object.localToGlobal(details.globalPosition);
-            _lines = new List.from(_lines);
-            _lastLines.points..add(_locationPoints);
-          });
-        },
-        onPanEnd: (DragEndDetails details) {
-          setState(() {
-            _lastLines.points.add(null);
-          });
-        },
-        child: new CustomPaint(
-          painter: new PaintPan(_lines),
-          size: Size.infinite,
-        ),
-      );
-    } else {
-      return new CustomPaint(
-        painter: new PaintPan(_lines),
-        size: Size.infinite,
-      );
-    }
-  }
-
-  void revert() {
-    bool success = _lastLines.reStep();
-    if (!success) {
-      if (_lines.length == 1) {
-        return;
-      }
-      for (int i = _lines.length - 2; i >= 0; i--) {
-        Line line = _lines[i];
-        bool reStep = line.reStep();
-        if (reStep) {
-          break;
-        }
-        _lines.remove(line);
-      }
-    }
-    setState(() {
-      _lines = new List.from(_lines);
-    });
-  }
-
-  void addLine(Color color) {
-    _lastLines = new Line(color);
-    _lines.add(_lastLines);
-  }
-}
-
-class Line {
-  List<Offset> points = <Offset>[];
-  Color color;
-  double strokeWidth;
-
-  Line(this.color, {this.strokeWidth = 5.0});
-
-  bool reStep() {
-    if (points.length == 0) {
-      return false;
-    }
-    points.removeLast();
-    for (int i = points.length - 1; i >= 0; i--) {
-      Offset offset = points[i];
-      if (offset == null) {
-        break;
-      }
-      points.remove(offset);
-    }
-    return true;
-  }
-}
-
-class PaintPan extends CustomPainter {
-  List<Line> lines = <Line>[];
-
-  Paint _paint;
-
-  PaintPan(this.lines) {
-    _paint = Paint()
-      ..strokeCap = StrokeCap.square
-      ..isAntiAlias = true
-      ..strokeCap = StrokeCap.round;
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (int i = 0; i < lines.length; i++) {
-      Line line = lines[i];
-      _paint
-        ..color = line.color
-        ..strokeWidth = line.strokeWidth;
-      List<Offset> path = line.points;
-      if (path.length > 1) {
-        for (int i = 0; i < path.length - 1; i++) {
-          if (path[i] != null && path[i + 1] != null) {
-            canvas.drawLine(path[i], path[i + 1], _paint);
-          }
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(PaintPan oldDelegate) {
-    if (oldDelegate.lines != lines) {
-      return true;
-    }
-    if (oldDelegate.lines.length != lines.length) {
-      return true;
-    }
-    for (int i = 0; i < lines.length; i++) {
-      if (oldDelegate.lines[i].points != lines[i].points) {
-        return true;
-      }
-      if (oldDelegate.lines[i].color != lines[i].color) {
-        return true;
-      }
-    }
-    return false;
   }
 }
 
